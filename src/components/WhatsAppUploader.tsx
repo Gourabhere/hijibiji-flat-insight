@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, Upload, File, CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const WhatsAppUploader = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,6 +23,7 @@ const WhatsAppUploader = () => {
           selectedFile.name.endsWith(".zip")) {
         setFile(selectedFile);
         setUploadStatus("idle");
+        setUploadProgress(0);
       } else {
         toast({
           title: "Invalid file type",
@@ -35,11 +39,19 @@ const WhatsAppUploader = () => {
     if (!file) return;
 
     setIsUploading(true);
+    setUploadProgress(0);
     
-    // Simulate upload process
+    // Simulate upload process with progress updates
     try {
       // In a real implementation, you would send the file to your backend here
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // and track the upload progress
+      
+      // Simulate progress updates
+      const totalSteps = 10;
+      for (let step = 1; step <= totalSteps; step++) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setUploadProgress(Math.floor((step / totalSteps) * 100));
+      }
       
       setUploadStatus("success");
       toast({
@@ -62,17 +74,23 @@ const WhatsAppUploader = () => {
     switch (uploadStatus) {
       case "success":
         return (
-          <div className="flex items-center gap-2 text-green-600 mt-3">
-            <CheckCircle className="w-5 h-5" />
-            <span>WhatsApp chat export processed successfully</span>
-          </div>
+          <Alert className="mt-4 bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-600">Upload Successful</AlertTitle>
+            <AlertDescription className="text-green-600">
+              WhatsApp chat export processed successfully
+            </AlertDescription>
+          </Alert>
         );
       case "error":
         return (
-          <div className="flex items-center gap-2 text-red-600 mt-3">
-            <AlertCircle className="w-5 h-5" />
-            <span>Failed to process WhatsApp chat export</span>
-          </div>
+          <Alert className="mt-4 bg-red-50 border-red-200" variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Upload Failed</AlertTitle>
+            <AlertDescription>
+              Failed to process WhatsApp chat export
+            </AlertDescription>
+          </Alert>
         );
       default:
         return null;
@@ -100,6 +118,16 @@ const WhatsAppUploader = () => {
                   ({(file.size / (1024 * 1024)).toFixed(2)} MB)
                 </span>
               </div>
+              
+              {isUploading && (
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                    <span>Uploading...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2" />
+                </div>
+              )}
               
               <Button 
                 onClick={handleUpload} 
