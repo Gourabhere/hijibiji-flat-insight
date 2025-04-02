@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Upload, User, Lock, Image, FileText } from "lucide-react";
+import WhatsAppUploader from "@/components/WhatsAppUploader";
 
 // Dummy WhatsApp conversations - would be replaced with actual data from backend
 const whatsappConversations = [
@@ -41,7 +42,6 @@ const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   
   // Dummy authentication - would be replaced with real authentication
   const handleLogin = () => {
@@ -51,15 +51,6 @@ const Admin = () => {
     } else {
       setError("Invalid password. Please try again.");
     }
-  };
-  
-  // Handle file upload simulation
-  const handleUpload = () => {
-    setIsUploading(true);
-    // Simulate upload process
-    setTimeout(() => {
-      setIsUploading(false);
-    }, 2000);
   };
 
   return (
@@ -110,27 +101,10 @@ const Admin = () => {
           <>
             {/* Content Management Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upload WhatsApp Conversations</CardTitle>
-                  <CardDescription>Import conversations from your WhatsApp export</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <MessageSquare className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upload your WhatsApp chat export (.txt file)
-                    </p>
-                    <Button 
-                      onClick={handleUpload}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? "Uploading..." : "Select File"}
-                      <Upload className="ml-2 w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Replace the old WhatsApp upload with our new component */}
+              <div className="md:col-span-2">
+                <WhatsAppUploader />
+              </div>
               
               <Card>
                 <CardHeader>
@@ -143,8 +117,8 @@ const Admin = () => {
                     <p className="text-sm text-muted-foreground mb-4">
                       Drag and drop or click to upload images and videos
                     </p>
-                    <Button onClick={handleUpload} disabled={isUploading}>
-                      {isUploading ? "Uploading..." : "Select Files"}
+                    <Button>
+                      Select Files
                       <Upload className="ml-2 w-4 h-4" />
                     </Button>
                   </div>
@@ -203,7 +177,11 @@ const Admin = () => {
                     <MessageSquare className="w-4 h-4" />
                     Export Conversations
                   </Button>
-                  <Button variant="outline" className="flex items-center gap-2 justify-center text-red-500 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 justify-center text-red-500 hover:text-red-700"
+                    onClick={() => setIsAuthenticated(false)}
+                  >
                     <Lock className="w-4 h-4" />
                     Log Out
                   </Button>
