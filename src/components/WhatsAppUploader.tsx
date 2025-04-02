@@ -116,10 +116,10 @@ const WhatsAppUploader = () => {
                 Upload your WhatsApp chat export as a ZIP file
               </p>
               <label className="cursor-pointer">
-                <Button as="span">
+                <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                   Select ZIP File
                   <Upload className="ml-2 w-4 h-4" />
-                </Button>
+                </div>
                 <input 
                   type="file" 
                   accept=".zip,application/zip,application/x-zip-compressed" 
