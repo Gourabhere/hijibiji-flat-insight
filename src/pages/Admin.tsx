@@ -1,10 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Upload, User, Lock, Image, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { MessageSquare, Upload, User, Lock, Image, FileText, Key } from "lucide-react";
 import WhatsAppUploader from "@/components/WhatsAppUploader";
+import { useToast } from "@/hooks/use-toast";
 
 // Dummy WhatsApp conversations - would be replaced with actual data from backend
 const whatsappConversations = [
@@ -42,6 +46,16 @@ const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const { toast } = useToast();
+  
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      const savedApiKey = localStorage.getItem("geminiApiKey") || "";
+      setApiKey(savedApiKey);
+    }
+  }, [isAuthenticated]);
   
   // Dummy authentication - would be replaced with real authentication
   const handleLogin = () => {
@@ -51,6 +65,15 @@ const Admin = () => {
     } else {
       setError("Invalid password. Please try again.");
     }
+  };
+
+  // Save API key to localStorage
+  const handleSaveApiKey = () => {
+    localStorage.setItem("geminiApiKey", apiKey);
+    toast({
+      title: "API Key Saved",
+      description: "Your Gemini API key has been saved successfully",
+    });
   };
 
   return (
@@ -101,7 +124,50 @@ const Admin = () => {
           <>
             {/* Content Management Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* Replace the old WhatsApp upload with our new component */}
+              {/* API Key Management Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Gemini API Key</CardTitle>
+                  <CardDescription>Add your Gemini API key for AI analysis</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="api-key">Gemini API Key</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            id="api-key"
+                            type="password"
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
+                            placeholder="Enter your Gemini API key"
+                          />
+                          <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                            <Key className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <Button onClick={handleSaveApiKey} disabled={!apiKey.trim()}>
+                          Save Key
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Get your Gemini API key from{" "}
+                        <a
+                          href="https://aistudio.google.com/app/apikey"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          Google AI Studio
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* WhatsApp Uploader */}
               <div className="md:col-span-2">
                 <WhatsAppUploader />
               </div>
