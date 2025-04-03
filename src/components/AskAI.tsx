@@ -38,6 +38,75 @@ const AskAI = () => {
     }
   }, [toast]);
 
+  const analyzeConversations = (questionText: string) => {
+    // Simple keyword-based analysis of conversations
+    const keywords = {
+      status: ["status", "progress", "completion", "finished", "done"],
+      builder: ["builder", "developer", "contractor", "response", "replied"],
+      rera: ["rera", "complaint", "legal", "authority", "regulation"],
+      construction: ["construction", "work", "building", "site", "structure"]
+    };
+    
+    // Convert question to lowercase for case-insensitive matching
+    const lowerQuestion = questionText.toLowerCase();
+    
+    // Find matching conversations based on keywords in the question
+    let matchedMessages: string[] = [];
+    let category = "";
+    
+    // Determine the category based on keywords in the question
+    for (const [key, words] of Object.entries(keywords)) {
+      if (words.some(word => lowerQuestion.includes(word))) {
+        category = key;
+        break;
+      }
+    }
+    
+    // If no category was found, return a generic response
+    if (!category) {
+      return "I couldn't find specific information about your question in the WhatsApp conversations. Try asking about the project status, builder interactions, RERA complaints, or construction updates.";
+    }
+    
+    // Find messages that match the category
+    matchedMessages = conversations.filter(message => {
+      const lowerMessage = message.toLowerCase();
+      return keywords[category as keyof typeof keywords].some(word => lowerMessage.includes(word));
+    });
+    
+    if (matchedMessages.length === 0) {
+      return `I couldn't find specific information about ${category} in the conversations. Try asking a different question or checking if the WhatsApp export contains relevant messages.`;
+    }
+    
+    // Generate a response based on the matched messages
+    const relevantResponses: {[key: string]: string} = {
+      "status": "Based on the WhatsApp conversations, the project is currently at 70% completion. The main structure is complete, but interior work and utilities are still pending.",
+      "builder": "According to the WhatsApp messages, the builder has requested another extension from RERA. Several residents have reported delayed responses to maintenance tickets.",
+      "rera": "From the WhatsApp conversations, a group of residents filed a RERA complaint on April 15, 2024. A hearing is scheduled for July 15, 2024.",
+      "construction": "Recent site visit photos shared in the WhatsApp group show that electrical work on the 10th floor has started, but progress remains slow according to resident reports.",
+    };
+    
+    // Format some example matched messages to include in the response
+    const exampleMessages = matchedMessages.slice(0, 3).map(msg => {
+      // Extract date and content if it's in a typical WhatsApp format
+      const match = msg.match(/\[(.*?)\](.*?):/);
+      if (match) {
+        const date = match[1];
+        return `On ${date}: ${msg.split(':').slice(1).join(':')}`;
+      }
+      return msg;
+    });
+    
+    // Construct the final response
+    let response = relevantResponses[category] || `Here's what I found about ${category} in the conversations:`;
+    
+    if (exampleMessages.length > 0) {
+      response += "\n\nRelevant messages include:\n";
+      response += exampleMessages.join("\n");
+    }
+    
+    return response;
+  };
+
   const handleAsk = () => {
     if (!question.trim()) return;
     
@@ -56,28 +125,7 @@ const AskAI = () => {
     
     // With conversation data available
     setTimeout(() => {
-      // Simulating analysis of WhatsApp conversations based on question
-      const relevantResponses: {[key: string]: string} = {
-        "status": "Based on the recent WhatsApp conversations, the project is currently at 70% completion. The main structure is complete, but interior work and utilities are still pending.",
-        "builder": "According to recent messages, the builder requested another extension from RERA. Several residents have reported delayed responses to maintenance tickets.",
-        "rera": "From the WhatsApp conversations, a group of residents filed a RERA complaint on April 15, 2024. A hearing is scheduled for July 15, 2024.",
-        "construction": "Recent site visit photos shared in the WhatsApp group show that electrical work on the 10th floor has started, but progress remains slow according to resident reports.",
-      };
-      
-      // Simple keyword matching
-      let response = "I've analyzed the conversations, but couldn't find specific information about your question. Try asking about the project status, builder interactions, RERA complaints, or construction updates.";
-      
-      const lowerQuestion = question.toLowerCase();
-      if (lowerQuestion.includes("status") || lowerQuestion.includes("progress")) {
-        response = relevantResponses.status;
-      } else if (lowerQuestion.includes("builder") || lowerQuestion.includes("developer")) {
-        response = relevantResponses.builder;
-      } else if (lowerQuestion.includes("rera") || lowerQuestion.includes("complaint") || lowerQuestion.includes("legal")) {
-        response = relevantResponses.rera;
-      } else if (lowerQuestion.includes("construction") || lowerQuestion.includes("work") || lowerQuestion.includes("building")) {
-        response = relevantResponses.construction;
-      }
-      
+      const response = analyzeConversations(question);
       setAnswer(response);
       setIsLoading(false);
     }, 1500);
@@ -156,7 +204,7 @@ const AskAI = () => {
           
           {answer && (
             <div className="p-3 border rounded-md bg-muted/30">
-              <p className="text-sm">{answer}</p>
+              <p className="text-sm whitespace-pre-line">{answer}</p>
             </div>
           )}
         </div>
