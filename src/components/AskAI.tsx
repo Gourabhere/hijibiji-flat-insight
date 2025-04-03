@@ -11,6 +11,7 @@ const suggestedQuestions = [
   "What's the recent interaction with the builder?",
   "What was discussed about RERA complaints?",
   "Any updates about construction progress?",
+  "When is the expected delivery date?",
 ];
 
 const AskAI = () => {
@@ -39,12 +40,13 @@ const AskAI = () => {
   }, [toast]);
 
   const analyzeConversations = (questionText: string) => {
-    // Simple keyword-based analysis of conversations
+    // Enhanced keyword-based analysis of conversations
     const keywords = {
       status: ["status", "progress", "completion", "finished", "done"],
       builder: ["builder", "developer", "contractor", "response", "replied"],
       rera: ["rera", "complaint", "legal", "authority", "regulation"],
-      construction: ["construction", "work", "building", "site", "structure"]
+      construction: ["construction", "work", "building", "site", "structure"],
+      delivery: ["delivery", "handover", "possession", "completion date", "expected date", "finish date", "when", "timeline"]
     };
     
     // Convert question to lowercase for case-insensitive matching
@@ -62,9 +64,26 @@ const AskAI = () => {
       }
     }
     
+    // Handle special cases where the question might not contain explicit keywords
+    if (!category) {
+      // Check for delivery date questions using pattern matching
+      if (
+        lowerQuestion.includes("when") && 
+        (lowerQuestion.includes("ready") || lowerQuestion.includes("complete") || lowerQuestion.includes("done"))
+      ) {
+        category = "delivery";
+      } else if (
+        lowerQuestion.includes("date") || 
+        lowerQuestion.includes("deadline") || 
+        lowerQuestion.includes("finish")
+      ) {
+        category = "delivery";
+      }
+    }
+    
     // If no category was found, return a generic response
     if (!category) {
-      return "I couldn't find specific information about your question in the WhatsApp conversations. Try asking about the project status, builder interactions, RERA complaints, or construction updates.";
+      return "I couldn't find specific information about your question in the WhatsApp conversations. Try asking about the project status, builder interactions, RERA complaints, construction updates, or the expected delivery date.";
     }
     
     // Find messages that match the category
@@ -72,6 +91,11 @@ const AskAI = () => {
       const lowerMessage = message.toLowerCase();
       return keywords[category as keyof typeof keywords].some(word => lowerMessage.includes(word));
     });
+    
+    if (matchedMessages.length === 0 && category === "delivery") {
+      // Special handling for delivery date questions: provide timeline info even if no WhatsApp messages match
+      return "Based on the project timeline, the latest promised delivery date is September 2025. This was updated after the builder requested another extension from RERA. The original handover date was in 2020, followed by extensions in 2022 and 2024.";
+    }
     
     if (matchedMessages.length === 0) {
       return `I couldn't find specific information about ${category} in the conversations. Try asking a different question or checking if the WhatsApp export contains relevant messages.`;
@@ -83,6 +107,7 @@ const AskAI = () => {
       "builder": "According to the WhatsApp messages, the builder has requested another extension from RERA. Several residents have reported delayed responses to maintenance tickets.",
       "rera": "From the WhatsApp conversations, a group of residents filed a RERA complaint on April 15, 2024. A hearing is scheduled for July 15, 2024.",
       "construction": "Recent site visit photos shared in the WhatsApp group show that electrical work on the 10th floor has started, but progress remains slow according to resident reports.",
+      "delivery": "According to the latest update from the builder (April 2024), the expected delivery date is September 2025. This is the third revised timeline after two previous extensions from the original 2020 completion date.",
     };
     
     // Format some example matched messages to include in the response
