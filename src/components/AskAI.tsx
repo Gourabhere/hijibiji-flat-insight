@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, Send } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +19,10 @@ const AskAI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [conversations, setConversations] = useState<string[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem("geminiApiKey") || "";
+  });
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const { toast } = useToast();
 
   // Effect to check for WhatsApp conversations in localStorage
@@ -39,6 +42,90 @@ const AskAI = () => {
     }
   }, [toast]);
 
+  // Check if API key exists in localStorage
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem("geminiApiKey");
+    if (!storedApiKey) {
+      setShowApiKeyInput(true);
+    } else {
+      setApiKey(storedApiKey);
+      setShowApiKeyInput(false);
+    }
+  }, []);
+
+  const saveApiKey = () => {
+    if (apiKey.trim()) {
+      localStorage.setItem("geminiApiKey", apiKey);
+      setShowApiKeyInput(false);
+      toast({
+        title: "API Key Saved",
+        description: "Your Gemini API key has been saved",
+      });
+    }
+  };
+
+  const fetchGeminiResponse = async (userQuestion: string, conversationData: string[]) => {
+    try {
+      // Prepare the context for Gemini API
+      const whatsappContext = conversationData.slice(0, 100).join("\n"); // Limit context size
+      
+      const prompt = `
+You are an AI assistant analyzing WhatsApp conversations for a real estate project. 
+Here is the context from the WhatsApp conversations:
+
+${whatsappContext}
+
+User question: ${userQuestion}
+
+Please analyze the WhatsApp conversations and answer the question. 
+If the information is not available in the given context, provide the most relevant information 
+you can find or state that you couldn't find specific information about the question.
+Focus on project status, construction updates, builder interactions, RERA complaints, delivery dates, 
+or other relevant aspects of the real estate project.
+Format your response in a clear, concise manner with relevant information from the conversations if available.
+`;
+
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Failed to get response from Gemini");
+      }
+
+      const data = await response.json();
+      if (data.candidates && data.candidates[0]?.content?.parts && data.candidates[0].content.parts[0]?.text) {
+        return data.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error("Unexpected response format from Gemini API");
+      }
+    } catch (error) {
+      console.error("Error fetching from Gemini API:", error);
+      return `Error analyzing conversations: ${error instanceof Error ? error.message : "Unknown error"}. Please try again later.`;
+    }
+  };
+
+  // Fallback to local analysis when API key is not available or API call fails
   const analyzeConversations = (questionText: string) => {
     // Enhanced keyword-based analysis of conversations
     const keywords = {
@@ -132,7 +219,7 @@ const AskAI = () => {
     return response;
   };
 
-  const handleAsk = () => {
+  const handleAsk = async () => {
     if (!question.trim()) return;
     
     setIsLoading(true);
@@ -148,12 +235,24 @@ const AskAI = () => {
       return;
     }
     
-    // With conversation data available
-    setTimeout(() => {
-      const response = analyzeConversations(question);
+    try {
+      let response;
+      
+      // Use Gemini API if API key is available
+      if (apiKey) {
+        response = await fetchGeminiResponse(question, conversations);
+      } else {
+        // Fallback to local analysis
+        response = analyzeConversations(question);
+      }
+      
       setAnswer(response);
+    } catch (error) {
+      console.error("Error processing question:", error);
+      setAnswer(`Sorry, there was an error processing your question: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleSuggestedQuestion = (q: string) => {
@@ -167,12 +266,38 @@ const AskAI = () => {
         <CardTitle>Ask AI</CardTitle>
         <CardDescription>
           {isDataLoaded 
-            ? "Get insights from your WhatsApp conversations and project documents" 
+            ? "Get insights from your WhatsApp conversations using Gemini AI" 
             : "Upload WhatsApp conversations in Admin to enable AI analysis"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {showApiKeyInput && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Enter your Gemini API key to enable advanced AI analysis:</p>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  placeholder="Paste your Gemini API key here"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <Button onClick={saveApiKey} disabled={!apiKey.trim()}>Save</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                You can get a Gemini API key from{" "}
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  Google AI Studio
+                </a>
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Input
               placeholder="Ask a question about the project..."
@@ -213,7 +338,7 @@ const AskAI = () => {
             <div className="p-4 text-center">
               <p className="text-sm text-muted-foreground">
                 {isDataLoaded 
-                  ? "Analyzing WhatsApp conversations and project documents..." 
+                  ? "Analyzing WhatsApp conversations with Gemini AI..." 
                   : "Checking for available data..."}
               </p>
             </div>
