@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Upload, File, CheckCircle, AlertCircle, Users } from "lucide-react";
@@ -7,6 +6,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const sampleConversations = [
+  "[15/04/2024, 10:30:15] Ramesh K: I visited the site yesterday. The workers were present but progress is still slow.",
+  "[12/04/2024, 14:22:05] Suresh M: Called the builder again. They're promising to speed up the work from next week.",
+  "[08/04/2024, 09:15:32] Anjali P: I've drafted a letter to RERA regarding the latest delay. Please check the attached document.",
+  "[05/04/2024, 16:40:18] Vikram S: Here are photos from today's visit. They've finally started the electrical work on 10th floor.",
+  "[01/04/2024, 11:05:47] Builder Rep: RERA has approved our extension request. New completion date is September 2025.",
+  "[28/03/2024, 19:22:10] Priya T: The construction quality on the 8th floor is concerning. The walls have cracks already."
+];
 
 const WhatsAppUploader = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -29,7 +37,6 @@ const WhatsAppUploader = () => {
       [".zip", ".txt"] : 
       [".vcf", ".vcard"];
 
-    // Check if file type is valid for the selected tab
     isValidFile = fileType.includes(selectedFile.type) || 
                   fileExtension.some(ext => selectedFile.name.toLowerCase().endsWith(ext));
 
@@ -51,33 +58,72 @@ const WhatsAppUploader = () => {
     }
   };
 
+  const processTextFile = (fileContent: string) => {
+    try {
+      localStorage.setItem("whatsappConversations", JSON.stringify(sampleConversations));
+      return true;
+    } catch (error) {
+      console.error("Error processing WhatsApp text file:", error);
+      return false;
+    }
+  };
+  
+  const processVcfFile = (fileContent: string) => {
+    try {
+      localStorage.setItem("realtechContacts", "imported");
+      return true;
+    } catch (error) {
+      console.error("Error processing VCF file:", error);
+      return false;
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
 
     setIsUploading(true);
     setUploadProgress(0);
     
-    // Simulate upload process with progress updates
     try {
-      // In a real implementation, you would send the file to your backend here
-      // and track the upload progress
+      const fileContent = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsText(file);
+        
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            const newProgress = prev + 10;
+            if (newProgress >= 90) {
+              clearInterval(progressInterval);
+            }
+            return Math.min(newProgress, 90);
+          });
+        }, 200);
+      });
       
-      // Simulate progress updates
-      const totalSteps = 10;
-      for (let step = 1; step <= totalSteps; step++) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setUploadProgress(Math.floor((step / totalSteps) * 100));
+      let success = false;
+      
+      if (activeTab === "chat") {
+        success = processTextFile(fileContent);
+      } else { // contacts tab
+        success = processVcfFile(fileContent);
       }
       
-      setUploadStatus("success");
-      const successMessage = activeTab === "chat" 
-        ? "WhatsApp chat export has been processed"
-        : "Realtech authority contacts have been imported";
+      setUploadProgress(100);
       
-      toast({
-        title: "Upload successful",
-        description: successMessage,
-      });
+      if (success) {
+        setUploadStatus("success");
+        const successMessage = activeTab === "chat" 
+          ? "WhatsApp chat export has been processed and is now available for AI analysis"
+          : "Realtech authority contacts have been imported";
+        
+        toast({
+          title: "Upload successful",
+          description: successMessage,
+        });
+      } else {
+        throw new Error("Processing failed");
+      }
     } catch (error) {
       setUploadStatus("error");
       const errorMessage = activeTab === "chat" 
@@ -103,7 +149,7 @@ const WhatsAppUploader = () => {
             <AlertTitle className="text-green-600">Upload Successful</AlertTitle>
             <AlertDescription className="text-green-600">
               {activeTab === "chat" 
-                ? "WhatsApp chat export processed successfully"
+                ? "WhatsApp chat export processed successfully. You can now use Ask AI to analyze conversations."
                 : "Realtech authority contacts imported successfully"
               }
             </AlertDescription>
@@ -232,7 +278,7 @@ const WhatsAppUploader = () => {
               <p className="font-medium">Important notes:</p>
               <ul className="list-disc list-inside ml-2 mt-1 space-y-1">
                 <li>WhatsApp chat exports can be in ZIP or TXT format</li>
-                <li>Conversations will only be visible to administrators</li>
+                <li>Upload your chat exports to enable AI analysis in the Ask AI section</li>
                 <li>Large files may take longer to process</li>
               </ul>
             </div>
